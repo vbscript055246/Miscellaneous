@@ -3,9 +3,9 @@
 #include <cstdlib>
 #include <iostream>
 
-#define M 100
-#define O 100
-#define N 100
+#define M 62
+#define O 7
+#define N 15
 #define chunk 5
 class node{
 
@@ -137,25 +137,62 @@ int main(int argc, char *argv[]) {
 
 	st = omp_get_wtime(); // timer start
 
+	node ***page = new node**[page_num];
+
+#pragma omp parallel shared(page)  private(i, j)
+{
+	#pragma omp for schedule(guided)
+		for (i = 0; i < page_num; ++i)
+			page[i] = new node*[page_col];
+
+	#pragma omp for schedule (guided)
+		for (i = 0; i < page_num; ++i)
+			for (j = 0; j < page_col; ++j)
+				page[i][j] = new node[page_row];
+	#pragma omp barrier
+}
 //           ready to start
 
 	printf("ready to start :%lf\n", omp_get_wtime() - st);
+	int page_ptr = 0;
 
-// mul
 #pragma omp parallel shared(page, o ,m, page_ptr, a, b) private(I, J, i, j)
 {
 	#pragma omp for schedule (guided) 
-		
+		for (I = 0; I < o; I += 2) {
+			for (J = 0; J < o; J += 2) {
+				for (i = 0; i < m; i += 2) {
+
+					node AM(a[i][I], a[i][I + 1], a[i + 1][I], a[i + 1][I + 1]);
+					for (j = 0; j < m; j += 2) {
+						node BM(b[J][j], b[J][j + 1], b[J + 1][j], b[J + 1][j + 1]);
+						sp = omp_get_wtime();
+						page[page_ptr][i / 2][j / 2] = AM * BM;
+						printf("cal done :%lf\n", omp_get_wtime() - sp);
+					}
+
+				}
+			}
+			page_ptr++;
+		}
 	#pragma omp barrier
 
 }
 
+	printf("page done :%lf\n", omp_get_wtime() - st);
 
 
 	//sum
 #pragma omp parallel shared(page, page_ptr, page_col, page_row) private(k, i, j)
 {
-	
+	#pragma omp for schedule(guided) 
+		for (k = 0; k < page_ptr; k++) {
+			for (i = 0; i < page_col; i++) {
+				for (j = 0; j < page_row; j++) {
+					page[page_num - 1][i][j] += page[k][i][j];
+				}
+			}
+		}
 
 	#pragma omp barrier
 }
@@ -164,7 +201,12 @@ int main(int argc, char *argv[]) {
 	//combine
 #pragma omp parallel shared(page, page_col, page_row, c) private(i, j)
 {
-	
+	#pragma omp for schedule(guided) 
+		for (i = 0; i < page_col; ++i) {
+			for (j = 0; j < page_row; ++j) {
+				page[page_num - 1][i][j].write((double *)c, i * 2, j * 2, M, N);
+			}
+		}
 	#pragma omp barrier
 }
 	printf("combine done :%lf\n", omp_get_wtime() - st);
