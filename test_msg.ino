@@ -32,42 +32,48 @@ void setup() {
 
 void loop() {
   int cmd[3],ptr=0;
-  int table[4][3]={
+  int table[5][3]={
       {128,128,128}, //2
       {248,128,128}, //3
       {120,248,128}, //5
       {128,248,128}, //6
+      {248,248,128}  //7
     };
   while(1){
-    while(BT.available()>0){
+    while(BT.available()>0){;
       cmd[ptr] = BT.read();
       ptr++;
     }
     if(ptr == 3){
-      for(int i=0;i<4;i++){
+      for(int i=0;i<5;i++){
         int flag = 1;
-        for(int j=0;j<3;j++){
+        for(int j=0;j<3;  .j++){
           if(table[i][j]!=cmd[j]){
             flag = 0;
             break;
           }
         }
         if(flag > 0){
-          if(i == 0){
+          if(i == 0){ //set to 180
             Servo_1.write(180);
             Serial.println(2);
           }
-          else if(i == 1){
+          else if(i == 1){ //set to 0
             Servo_1.write(0);
             Serial.println(3);
           }
-          else if(i == 2){
+          else if(i == 2){ //set to 180
             Servo_2.write(180);
             Serial.println(5);
           }
-          else if(i == 3){
+          else if(i == 3){ //set to 0
             Servo_2.write(0);
             Serial.println(6);
+          }
+          else if(i == 4){ //set both to 90
+            Servo_2.write(90);
+            Servo_1.write(90);
+            Serial.println(7);
           }
           else{
             Serial.println("ERROR");
